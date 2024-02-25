@@ -4,10 +4,14 @@ import "fmt"
 
 const englishEllowPrefix = "Hello, "
 
-func Hello(name string ) string {
+func Hello(name string) string {
+	if name == "" {
+		name = "World" 
+	}
+
 	return englishEllowPrefix + name
 }
 
-func main(){
+func main() {
 	fmt.Println(Hello("word"))
 }
