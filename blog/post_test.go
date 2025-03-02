@@ -1,42 +1,66 @@
 package blog_test
 
 import (
-	"errors"
-	"io/fs"
 	"master/blog"
 	"reflect"
 	"testing"
 	"testing/fstest"
 )
 
-type StubFailingFS struct{}
+func TestNewblog(t *testing.T) {
+	const (
+		firstBody = `Title: Post 1
+Description: Description 1
+Tags: tdd, go
+---
+Hello
+World`
+		secondBody = `Title: Post 2
+Description: Description 2
+Tags: rust, borrow-checker
+---
+B
+L
+M`
+	)
 
-func (f StubFailingFS) Open(name string) (fs.File, error) {
-	return nil, errors.New("oh no, I always fail")
+	fs := fstest.MapFS{
+		"hello world.md":  {Data: []byte(firstBody)},
+		"hello-world2.md": {Data: []byte(secondBody)},
+	}
+
+	posts, err := blog.NewPostsFromFS(fs)
+
+	assertNoError(t, err)
+
+	assertPostsLength(t, posts, fs)
+
+	assertPost(t, posts[0], blog.Post{
+		Title:       "Post 1",
+		Description: "Description 1",
+		Tags:        []string{"tdd", "go"},
+		Body: `Hello
+World`,
+	})
 }
 
-func TestNewPostsFromFS(t *testing.T) {
+func assertNoError(t *testing.T, err error) {
+	t.Helper()
+	if err != nil {
+		t.Fatal(err)
+	}
+}
 
-	t.Run("Load the file with specific text", func(t *testing.T) {
-		files := fstest.MapFS{
-			"hello world.md":  {Data: []byte("Title: Post 1")},
-			"hello-world2.md": {Data: []byte("Title: Post 2")},
-		}
+func assertPostsLength(t *testing.T, posts []blog.Post, fs fstest.MapFS) {
+	t.Helper()
+	if len(posts) != len(fs) {
+		t.Errorf("got %d posts, wanted %d posts", len(posts), len(fs))
+	}
+}
 
-		posts, err := blog.NewPostsFromFS(files)
-
-		if err != nil {
-			t.Fatal(err)
-		}
-
-		if len(posts) != len(files) {
-			t.Errorf("got %d posts, wanted %d posts", len(posts), len(files))
-		}
-		got := posts[0]
-		want := blog.Post{Title: "Post 1"}
-
-		if !reflect.DeepEqual(got, want) {
-			t.Errorf("got %+v, want %+v", got, want)
-		}
-	})
+func assertPost(t *testing.T, got blog.Post, want blog.Post) {
+	t.Helper()
+	if !reflect.DeepEqual(got, want) {
+		t.Errorf("got %+v, want %+v", got, want)
+	}
 }
